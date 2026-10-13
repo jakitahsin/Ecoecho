@@ -1,0 +1,63 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ECOECHO Admin | Our Work</title><meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--eco-green:#41B251;--forest:#1E6B3A;--deep-night:#0F2A1B;--leaf-mint:#DFF3E2;--flag-red:#F42A41}
+*{box-sizing:border-box}body{margin:0;background:var(--leaf-mint);color:var(--deep-night);font:400 16px/1.6 Poppins,'Hind Siliguri',system-ui,sans-serif}
+.w{max-width:760px;margin:auto;padding:40px 16px}h1{font-size:32px;margin:0 0 4px}h2{font-size:22px;margin:36px 0 12px}
+.cd{background:#fff;border-radius:18px;padding:24px;box-shadow:0 10px 30px #0F2A1B1a}
+label{display:block;font-weight:600;font-size:14px;margin:14px 0 5px}.rq{color:var(--flag-red)}
+input,select,textarea{width:100%;font:400 16px Poppins,'Hind Siliguri',sans-serif;padding:12px 14px;border:1.5px solid #9bb5a2;border-radius:12px;background:#fff;color:var(--deep-night)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:560px){.row{grid-template-columns:1fr}}
+.btn{border:2px solid var(--eco-green);background:var(--eco-green);color:var(--deep-night);font:700 15px Poppins;padding:12px 24px;border-radius:999px;cursor:pointer;margin-top:18px}.btn:disabled{opacity:.5;cursor:wait}
+.del{background:#fff;color:#B3122A;border:1.5px solid #B3122A;border-radius:999px;padding:6px 14px;font:600 13px Poppins;cursor:pointer}
+#pv{max-width:100%;max-height:260px;border-radius:12px;margin-top:10px;display:block}#msg{font-weight:600;margin:12px 0 0}
+.it{display:flex;gap:14px;align-items:center;padding:12px 0;border-top:1px solid #d9d6c6}.it img{width:96px;height:72px;object-fit:cover;border-radius:10px;flex:none}.it div{flex:1;min-width:0}.it small{opacity:.7}
+a{color:var(--forest)}
+</style></head><body><div class="w">
+<p><a href="/#/work">← Back to website</a></p>
+<h1>Our Work — Upload</h1><p>Add a photo of our work with a short description. It will appear in the “Our Work” section of the website.</p>
+
+<div class="cd" id="login"><label for="pw">Admin password</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" id="go">Continue</button><p id="lm"></p></div>
+
+<div id="app" hidden>
+<form class="cd" id="f">
+<label for="img">Photo <i class="rq">*</i></label><input id="img" type="file" accept="image/jpeg,image/png,image/webp" required><img id="pv" hidden alt="">
+<label for="title">Title <i class="rq">*</i></label><input id="title" maxlength="120" required placeholder="e.g. Climate literacy workshop at Dhaka College">
+<label for="description">Details <i class="rq">*</i></label><textarea id="description" rows="5" maxlength="2000" required placeholder="What happened, who took part, what was the outcome?"></textarea>
+<div class="row"><div><label for="category">Category</label><select id="category"><option value="">—</option><option>Workshop</option><option>Campaign</option><option>Research</option><option>Event</option><option>Community</option><option>Advocacy</option></select></div>
+<div><label for="date">Date</label><input id="date" type="date"></div></div>
+<label for="location">Location</label><input id="location" maxlength="80" placeholder="District / City">
+<button class="btn" id="up">Upload</button><p id="msg" role="status"></p>
+</form>
+<h2>Uploaded work</h2><div class="cd" id="ls">Loading…</div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);let key='';
+try{key=sessionStorage.getItem('ek')||''}catch{}
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+
+function enter(){$('#login').hidden=true;$('#app').hidden=false;load()}
+if(key)enter();
+$('#go').onclick=()=>{key=$('#pw').value;if(!key)return;try{sessionStorage.setItem('ek',key)}catch{}enter()};
+$('#pw').onkeydown=e=>{if(e.key=='Enter')$('#go').click()};
+
+// Resize to max 1600px and re-encode as JPEG so uploads stay well under Vercel's 4.5 MB request limit.
+function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const s=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.82))};im.onerror=no;im.src=u})}
+
+$('#img').onchange=()=>{const f=$('#img').files[0];$('#pv').hidden=!f;if(f)$('#pv').src=URL.createObjectURL(f)};
+
+async function api(method,body,q=''){const r=await fetch('/api/works'+q,{method,headers:{'content-type':'application/json','x-admin-key':key},body:body&&JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(r.status==401){try{sessionStorage.removeItem('ek')}catch{}key='';$('#app').hidden=true;$('#login').hidden=false;$('#lm').textContent='Wrong password — try again.';throw 0}if(!r.ok)throw new Error(j.message||'Upload failed');return j}
+
+$('#f').onsubmit=async e=>{e.preventDefault();const m=$('#msg');$('#up').disabled=true;m.textContent='Uploading…';
+try{await api('POST',{image:await shrink($('#img').files[0]),title:$('#title').value,description:$('#description').value,category:$('#category').value,date:$('#date').value,location:$('#location').value});
+m.textContent='✓ Uploaded! It will show on the website within a minute.';$('#f').reset();$('#pv').hidden=true;load()}
+catch(err){if(err)m.textContent='✗ '+(err.message||'Something went wrong')}finally{$('#up').disabled=false}};
+
+async function load(){try{const r=await fetch('/api/works?t='+Date.now()).then(r=>r.json());const W=r.works||[];
+$('#ls').innerHTML=W.length?W.map(w=>`<div class="it"><img src="${esc(w.image)}" alt=""><div><b>${esc(w.title)}</b><br><small>${esc([w.category,w.date,w.location].filter(Boolean).join(' · '))}</small></div><button class="del" data-id="${esc(w.id)}">Delete</button></div>`).join(''):'Nothing uploaded yet.'}
+catch{$('#ls').textContent='Could not load the list.'}}
+
+$('#ls').onclick=async e=>{const b=e.target.closest('.del');if(!b||!confirm('Delete this work from the website?'))return;b.disabled=true;try{await api('DELETE',null,'?id='+b.dataset.id);load()}catch(err){b.disabled=false;if(err)alert(err.message)}};
+</script></div></body></html>
